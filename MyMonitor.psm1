@@ -169,9 +169,6 @@ if (-Not ($sb -is [scriptblock])) {
      $sb = [scriptblock]::Create("$sb")
 }
 
-#create a hashtable
-$hash=@{}
-
 #create a collection of objects
 $objs = @()
 
@@ -201,7 +198,7 @@ while( -Not (&$sb) ) {
               #update same app that was previously found
               Write-Verbose "[$(Get-Date)] updating existing object $LastApp"
               
-              $existing = $objs | where { $_.WindowTitle -eq $LastApp }
+              $existing = $objs | Where-Object { $_.WindowTitle -eq $LastApp }
  
               Write-Verbose "[$(Get-Date)] SW = $($sw.elapsed)"
                             
@@ -220,13 +217,6 @@ while( -Not (&$sb) ) {
             else {
                 #create new object
 
-                #include a detail property object
-                [pscustomObject]$detail=@{
-                  StartTime = $start
-                  EndTime = Get-Date
-                  ProcessID = $lastProcess.ID
-                  Process = if ($LastProcess) {$LastProcess} else {$process}
-                }
                 Write-Verbose "[$(Get-Date)] Creating new object for $LastApp"
                 Write-Verbose "[$(Get-Date)] Time = $($sw.elapsed)"
 
@@ -297,7 +287,7 @@ if ($objs.WindowTitle -contains $LastApp) {
     Write-Verbose "[$(Get-Date)] processing last object"
     Write-Verbose "[$(Get-Date)] updating existing object for $LastApp"
     Write-Verbose "[$(Get-Date)] SW = $($sw.elapsed)"
-    $existing = $objs | where { $_.WindowTitle -eq $LastApp }
+    $existing = $objs | Where-Object { $_.WindowTitle -eq $LastApp }
 
     $existing.Time+= $sw.Elapsed
 
@@ -562,11 +552,11 @@ End {
 
     if ($Category) {
         Write-Verbose "Getting category breakdown"
-        $output = $data.category | select -Unique | foreach {
+        $output = $data.category | Select-Object -Unique | ForEach-Object {
          $thecategory = $_
          $hash = [ordered]@{Category=$theCategory}
          $items = $($data).Where({$_.category -contains $thecategory})
-         $totaltime = $items | foreach -begin {$time = new-timespan} -process {$time+=$_.time} -end {$time}
+         $totaltime = $items | ForEach-Object -begin {$time = new-timespan} -process {$time+=$_.time} -end {$time}
          $hash.Add("Count",$items.count)
          $hash.Add("Time",$TotalTime)
          [pscustomobject]$hash
@@ -577,11 +567,11 @@ End {
           $output = ($hash.GetEnumerator()).foreach({
           [pscustomobject]@{$objfilter=$_.Name;"TotalTime"=$_.Value}
           
-        }) | Sort TotalTime
+        }) | Sort-Object TotalTime
     }
 
     if ($TimeOnly) {
-        $output | foreach -begin {$total = New-TimeSpan} -process {$total+=$_.Totaltime} -end {$total}
+        $output | ForEach-Object -begin {$total = New-TimeSpan} -process {$total+=$_.Totaltime} -end {$total}
      }
      else {
         $output # | Select $objFilter,TotalTime
@@ -700,15 +690,15 @@ else {
 }
 
 if ($Grouped) {
-    $grouped| Select Name,
+    $grouped| Select-Object Name,
     @{Name="Total";Expression={ 
-    $_.Group | foreach -begin {$total = New-TimeSpan} -process {$total+=$_.time} -end {$total}
+    $_.Group | ForEach-Object -begin {$total = New-TimeSpan} -process {$total+=$_.time} -end {$total}
     }},
     @{Name="Start";Expression={
-    ($_.group | sort Detail).Detail[0].StartTime
+    ($_.group | Sort-Object Detail).Detail[0].StartTime
     }},
     @{Name="End";Expression={
-    ($_.group | sort Detail).Detail[-1].EndTime
+    ($_.group | Sort-Object Detail).Detail[-1].EndTime
     }}
 }
 else {
